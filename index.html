@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Práctica VR — A-Frame</title>
+  <!-- A-Frame 1.8.0 (última versión estable). Con esta sola línea ya tienes VR. -->
+  <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+</head>
+<body>
+  <!--
+    ESCENA VR COMPLETA. Cómo probarla:
+      • En computadora: clic derecho sobre el archivo en VS Code → "Open with Live Server".
+        Arrastra el mouse para mirar; teclas W A S D para moverte.
+      • En el celular: abre la misma URL y toca el ícono de gafas (abajo a la derecha)
+        para el modo Cardboard.
+    Úsala como base para: P1 (disección de una experiencia), P4 (interacción), P5 (mini-app VR).
+  -->
+  <a-scene>
+    <!-- Fondo -->
+    <a-sky color="#ECECEC"></a-sky>
+
+    <!-- Piso -->
+    <a-plane position="0 0 -4" rotation="-90 0 0" width="12" height="12" color="#7BC8A4"></a-plane>
+
+    <!-- Geometrías primitivas (la base del modelado 3D) -->
+    <!-- La caja gira cuando le haces clic con el cursor: base de la práctica de interacción P4 -->
+    <a-box id="caja" position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"
+           animation__click="property: rotation; to: 0 405 0; startEvents: click; dur: 600"></a-box>
+    <a-sphere position="0 1.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
+    <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
+
+    <!-- Texto flotante -->
+    <a-text value="Hola realidad virtual" position="-1.6 2.6 -3" color="#222" width="6"></a-text>
+
+    <!-- Cámara con cursor: apunta a la caja y haz clic para que gire -->
+    <a-entity camera look-controls wasd-controls>
+      <a-cursor color="#333"></a-cursor>
+    </a-entity>
+  </a-scene>
+</body>
+</html>
