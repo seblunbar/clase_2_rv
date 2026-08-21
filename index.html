@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <!-- Le dice al navegador que la página se adapta al ancho del dispositivo (celular, Quest, etc.) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sistema Solar — A-Frame</title>
+  <!-- Misma versión que los demás archivos de la carpeta: A-Frame 1.8.0 -->
+  <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+
+  <script>
+    // ------------------------------------------------------------------
+    // COMPONENTE: campo-estrellas
+    // Un "componente" en A-Frame es una pieza de comportamiento que le
+    // puedes pegar a cualquier entidad con un atributo HTML, por ejemplo:
+    //   <a-scene campo-estrellas="cantidad: 150">
+    // Aquí lo usamos para crear muchas estrellitas de fondo sin tener
+    // que escribir 150 líneas de <a-sphere> a mano en el HTML.
+    // ------------------------------------------------------------------
+    AFRAME.registerComponent('campo-estrellas', {
+
+      // "schema" define qué parámetros acepta el componente desde el HTML.
+      // Aquí solo aceptamos "cantidad" (cuántas estrellas crear), con 150 por defecto.
+      schema: {
+        cantidad: { type: 'number', default: 150 }
+      },
+
+      // "init" se ejecuta UNA sola vez, cuando la entidad con este componente
+      // se carga en la escena. Es el lugar típico para crear cosas.
+      init: function () {
+        // Repetimos el proceso "cantidad" de veces (por defecto 150 estrellas)
+        for (let i = 0; i < this.data.cantidad; i++) {
+
+          // --- Elegimos un punto aleatorio sobre una esfera imaginaria ---
+          // Usamos coordenadas esféricas (radio, theta, phi) y las convertimos
+          // a coordenadas cartesianas (x, y, z), que es lo que entiende A-Frame.
+          const radio = 40; // qué tan lejos ponemos las estrellas (fuera de los planetas)
+          const theta = Math.random() * Math.PI * 2; // ángulo alrededor del eje Y (0° a 360°)
+          // Este cálculo con acos (en vez de un ángulo aleatorio simple) evita que
+          // se amontonen estrellas en los "polos" de la esfera; reparte todo parejo.
+          const phi = Math.acos((Math.random() * 2) - 1);
+
+          const x = radio * Math.sin(phi) * Math.cos(theta);
+          const y = radio * Math.sin(phi) * Math.sin(theta);
+          const z = radio * Math.cos(phi);
+
+          // Creamos la etiqueta <a-sphere> por código, igual que si la
+          // hubiéramos escrito a mano en el HTML.
+          const estrella = document.createElement('a-sphere');
+          estrella.setAttribute('radius', 0.04 + Math.random() * 0.05); // tamaño variado
+          estrella.setAttribute('position', `${x} ${y} ${z}`);
+          estrella.setAttribute('color', '#FFFFFF');
+          // "shader: flat" hace que la estrella se vea del mismo color siempre,
+          // sin sombras ni brillos, como un punto de luz lejano de verdad.
+          estrella.setAttribute('material', 'shader: flat');
+
+          // La agregamos como hija de la entidad que tiene el componente
+          // (en nuestro caso, la propia <a-scene>).
+          this.el.appendChild(estrella);
+        }
+      }
+    });
+  </script>
+</head>
+
+<body>
+  <!--
+    SISTEMA SOLAR — el usuario es el centro y los planetas giran a su alrededor.
+
+    LA IDEA CLAVE (órbitas sin física, solo con jerarquía de rotación):
+      Cada planeta va dentro de una entidad invisible ("el brazo") que gira
+      sobre sí misma con una animación de rotación infinita. El planeta está
+      desplazado del centro de ese brazo (por ejemplo "4 0 0"), así que cuando
+      el brazo gira, el planeta dibuja un círculo a su alrededor.
+      Es el mismo truco que un brazo de reloj: el brazo gira en el centro,
+      la punta del brazo (el planeta) dibuja el círculo.
+
+      La Luna usa el mismo truco DENTRO de la Tierra: un brazo que gira
+      alrededor de la Tierra (no del usuario), con la Luna en la punta.
+      Así se demuestra una órbita "anidada" (órbita dentro de otra órbita).
+
+    CÓMO PROBARLO:
+      • En computadora: clic derecho → "Open with Live Server". Arrastra el
+        mouse para mirar alrededor; W A S D para caminar entre los planetas.
+      • En los Quest 3: sube la carpeta Github/ a GitHub Pages (WebXR exige
+        HTTPS) y ábrela con el Meta Quest Browser; toca el ícono de gafas
+        para entrar en VR. Verás tus controles Touch dibujados en las manos.
+  -->
+  <!-- El atributo "campo-estrellas" activa el componente que definimos arriba -->
+  <a-scene campo-estrellas="cantidad: 150">
+
+    <!-- Cielo negro-azulado: el "espacio" -->
+    <a-sky color="#00010D"></a-sky>
+
+    <!--
+      LUZ: como el usuario hace las veces de Sol, ponemos una luz tipo "point"
+      (bombilla) justo a la altura de los ojos del jugador, en el centro de
+      todo. Es la que ilumina la cara de cada planeta que mira hacia el centro.
+    -->
+    <a-entity light="type: point; color: #FFF3D0; intensity: 1.4; distance: 40"
+               position="0 1.6 0"></a-entity>
+    <!-- Luz ambiental tenue: para que el lado oscuro de los planetas no sea negro puro -->
+    <a-entity light="type: ambient; color: #30304A; intensity: 0.6"></a-entity>
+
+    <!-- Etiqueta flotante de bienvenida, fija frente a la posición inicial del jugador -->
+    <a-text value="Eres el centro del sistema solar.&#10;Los planetas giran a tu alrededor."
+            position="-2.4 2.4 -3" color="#FFFFFF" width="6"></a-text>
+
+    <!-- ============================================================
+         MERCURIO — el más rápido y el más cercano
+         "dur" (duración) chica = da la vuelta rápido, como en la vida real
+         ============================================================ -->
+    <!-- Este "brazo" invisible gira sobre el eje Y (arriba-abajo) sin parar -->
+    <a-entity position="0 1.6 0"
+              animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear">
+      <!-- Mercurio va desplazado 2 unidades del centro del brazo: por eso órbita -->
+      <a-sphere position="2 0 0" radius="0.12" color="#A9A9A9"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 1000; easing: linear"></a-sphere>
+    </a-entity>
+
+    <!-- ============================================================
+         VENUS
+         ============================================================ -->
+    <a-entity position="0 1.6 0"
+              animation="property: rotation; to: 0 360 0; loop: true; dur: 7000; easing: linear">
+      <a-sphere position="2.8 0 0" radius="0.22" color="#E3C16F"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 1800; easing: linear"></a-sphere>
+    </a-entity>
+
+    <!-- ============================================================
+         TIERRA + LUNA (órbita anidada: la Luna gira alrededor de la
+         Tierra, y la Tierra gira alrededor del usuario)
+         ============================================================ -->
+    <a-entity position="0 1.6 0"
+              animation="property: rotation; to: 0 360 0; loop: true; dur: 12000; easing: linear">
+      <!-- "grupo-tierra" agrupa a la Tierra y a la Luna para que viajen juntas -->
+      <a-entity position="3.6 0 0">
+        <a-sphere radius="0.28" color="#2E86FF"
+                  animation="property: rotation; to: 0 360 0; loop: true; dur: 2200; easing: linear"></a-sphere>
+        <!-- Brazo de la Luna: gira alrededor de la Tierra (posición 0 0 0 LOCAL, no del usuario) -->
+        <a-entity animation="property: rotation; to: 0 360 0; loop: true; dur: 1500; easing: linear">
+          <a-sphere position="0.6 0 0" radius="0.08" color="#CFCFCF"></a-sphere>
+        </a-entity>
+      </a-entity>
+    </a-entity>
+
+    <!-- ============================================================
+         MARTE
+         ============================================================ -->
+    <a-entity position="0 1.6 0"
+              animation="property: rotation; to: 0 360 0; loop: true; dur: 20000; easing: linear">
+      <a-sphere position="4.4 0 0" radius="0.18" color="#C1440E"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 2100; easing: linear"></a-sphere>
+    </a-entity>
+
+    <!-- ============================================================
+         JÚPITER — el más grande, gira lento porque está "más lejos"
+         ============================================================ -->
+    <a-entity position="0 1.6 0"
+              animation="property: rotation; to: 0 360 0; loop: true; dur: 35000; easing: linear">
+      <a-sphere position="5.8 0 0" radius="0.55" color="#D2A679"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 900; easing: linear"></a-sphere>
+    </a-entity>
+
+    <!-- ============================================================
+         SATURNO — igual que los demás, pero le agregamos un anillo
+         como hijo de la esfera para que gire pegado al planeta
+         ============================================================ -->
+    <a-entity position="0 1.6 0"
+              animation="property: rotation; to: 0 360 0; loop: true; dur: 48000; easing: linear">
+      <a-sphere position="7 0 0" radius="0.48" color="#E6C68C"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 1000; easing: linear">
+        <!-- El anillo es hijo de la esfera: hereda su posición y gira con ella -->
+        <a-ring radius-inner="0.65" radius-outer="1" rotation="90 0 0" color="#C9B37E"
+                material="side: double; shader: flat"></a-ring>
+      </a-sphere>
+    </a-entity>
+
+    <!-- ============================================================
+         EL JUGADOR (rig): el punto 0 0 0 sobre el que giran los planetas.
+         Por eso el jugador siempre queda "en el centro" del sistema solar.
+         ============================================================ -->
+    <a-entity id="rig" position="0 0 0">
+      <!-- La cámara real, a la altura de los ojos (1.6 m) -->
+      <a-entity camera look-controls wasd-controls position="0 1.6 0"></a-entity>
+
+      <!-- Modelos de los controles Touch del Quest 3 (sin interacción, solo se ven las manos) -->
+      <a-entity oculus-touch-controls="hand: left"></a-entity>
+      <a-entity oculus-touch-controls="hand: right"></a-entity>
+    </a-entity>
+
+  </a-scene>
+</body>
+</html>
